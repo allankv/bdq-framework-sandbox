@@ -983,6 +983,7 @@ body {
     }
   }).click(function () {
     $('#import_popup').popup('hide');
+    workspace.clear();
     var xml = Blockly.Xml.textToDom($('#xml_import').val());
     Blockly.Xml.domToWorkspace(workspace, xml);
   });
