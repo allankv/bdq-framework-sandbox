@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>DQ Profile Builder</title>
+  <script src="../../blockly_compressed.js"></script>
+  <script src="../../blocks_compressed.js"></script>
+  <script src="../../javascript_compressed.js"></script>
+  <script src="../../msg/js/en.js"></script>
+  <script src="https://code.jquery.com/jquery-1.8.2.min.js"></script>
+  <link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+  <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+  <script src="http://crypto-js.googlecode.com/svn/tags/3.0.2/build/rollups/md5.js"></script>
+
+  <!-- Include jQuery Popup Overlay -->
+  <script src="https://cdn.rawgit.com/vast-engineering/jquery-popup-overlay/1.7.10/jquery.popupoverlay.js"></script>
+
+  <style>
+
+  body {
+    background-color: #fff;
+    font-family: sans-serif;
+  }
+  h1 {
+    font-weight: normal;
+    font-size: 140%;
+  }
+  /*#popup {
+  transform: scale(0.8);
+}
+.popup_visible #popup {
+transform: scale(1);
+}*/
+html,
+body {
+  height: 100%;
+}
+
+</style>
+</head>
+<body>
+  <!-- <h2>Framework on BDQ</h2>
+  <p>This is a demo of a block-based toolbox for defining a DQ Profile according to the specifications proposed by Task Group I of the TDWG/GBIF Interest Group.</p>
+  <p>&rarr; More info on the <a href="#">Conceptual Framework on BDQ</a>...</p> -->
+  <div style="float: left; align:center">
+    <h2 style="margin-left: 30px; color:rgb(66, 74, 89)">Framework on BDQ - Sandbox</h2>
+  </div>
+  <div style="float: right;">
+    <div id="generateReport" style="margin: 10px">Generate DQ Report</div>
+    <div id="save" style="margin: 10px">Save</div>
+    <div id="load" style="margin: 10px">Load</div>
+    <div id="import_btn" style="margin: 10px">Import</div>
+    <div id="export_btn" style="margin: 10px">Export</div>
+    <div style="float: right; margin: 10px" id="workspaceName">Auto save: ON</div>
+  </div>
+  <div id="popup" style="background-color: #fff; padding: 20px; width:500px"></div>
+  <div id="import_popup" style="display: none; background-color: #fff; padding: 20px; ">
+    <p>Paste the XML content and click in "Import".</p>
+    <textarea id="xml_import" rows="20" cols="80">
+
+    </textarea><br>
+    <div style="margin-right: 10px" id="import_xml">Import</div>
+    <div id="cancel_import">Cancel</div>
+  </div>
+  <div id="export_popup" style="display: none; background-color: #fff; padding: 20px; ">
+    <p>Copy and save the following XML content.</p>
+    <textarea id="xml_export" rows="20" cols="80">
+
+    </textarea><br>
+    <div id="ok">Ok</div>
+  </div>
+  <div id="blocklyDiv" style="min-height: 100%; height: 100%; width: 100%;"></div>
+  <xml id="toolbox" style="display: none">
+    <category name="DQ Needs">
+      <block type="profile"></block>
+      <block type="use_case"></block>
+      <block type="measurement_policy"></block>
+      <block type="validation_policy"></block>
+      <block type="improvement_policy"></block>
+      <block type="ie"></block>
+      <block type="dimension_in_context"></block>
+      <block type="criterion_in_context"></block>
+      <block type="enhancement_in_context"></block>
+      <block type="dimension"></block>
+      <block type="criterion"></block>
+      <block type="enhancement"></block>
+    </category>
+    <category name="DQ Solutions">
+      <block type="solution"></block>
+      <block type="specification"></block>
+      <block type="mechanism"></block>
+    </category>
+    <category name="DQ Report">
+      <block type="report"></block>
+      <block type="assertion"></block>
+      <block type="dr"></block>
+      <block type="id"></block>
+      <block type="value"></block>
+      <block type="rt"></block>
+      <block type="result"></block>
+    </category>
+  </xml>
+  <script>
+  Blockly.Blocks['use_case'] = {
+    init: function() {
+      this.setColour(230);
+      this.appendDummyInput()
+      .appendField(new Blockly.FieldTextInput("Use Case"), "use_case");
+      this.setOutput(true, 'use_case');
+      this.setMutator(new Blockly.Mutator(['type_group_item_ie']));
+      this.typeCount_ = 2;
+    },
+    mutationToDom: function(workspace) {
+      var container = document.createElement('mutation');
+      container.setAttribute('types', this.typeCount_);
+      return container;
+    },
+    domToMutation: function(container) {
+      for (var x = 0; x < this.typeCount_; x++) {
+        this.removeInput('TYPE' + x);
+      }
+      this.typeCount_ = parseInt(container.getAttribute('types'), 10);
+      for (var x = 0; x < this.typeCount_; x++) {
+        var input = this.appendValueInput('TYPE' + x)
+        .setCheck('ie');
+        if (x == 0) {
+          input.appendField('Valuable Information Elements');
+        }
+      }
+    },
+    decompose: function(workspace) {
+      var containerBlock = workspace.newBlock('type_group_container_ie');
+      containerBlock.initSvg();
+      var connection = containerBlock.getInput('STACK').connection;
+      for (var x = 0; x < this.typeCount_; x++) {
+        var typeBlock = workspace.newBlock('type_group_item_ie');
+        typeBlock.initSvg();
+        connection.connect(typeBlock.previousConnection);
+        connection = typeBlock.nextConnection;
+      }
+      return containerBlock;
+    },
+    compose: function(containerBlock) {
+      for (var x = this.typeCount_ - 1; x >= 0; x--) {
+        this.removeInput('TYPE' + x);
+      }
+      this.typeCount_ = 0;
+      var typeBlock = containerBlock.getInputTargetBlock('STACK');
+      while (typeBlock) {
+        var input = this.appendValueInput('TYPE' + this.typeCount_)
+        .setCheck('ie');
+        if (this.typeCount_ == 0) {
+          input.appendField('Valuable Information Elements');
+        }
+        if (typeBlock.valueConnection_) {
+          input.connection.connect(typeBlock.valueConnection_);
+        }
+        this.typeCount_++;
+        typeBlock = typeBlock.nextConnection &&
+        typeBlock.nextConnection.targetBlock();
+      }
+    },
+    saveConnections: function(containerBlock) {
+      var typeBlock = containerBlock.getInputTargetBlock('STACK');
+      var x = 0;
+      while (typeBlock) {
+        var input = this.getInput('TYPE' + x);
+        typeBlock.valueConnection_ = input && input.connection.targetConnection;
+        x++;
+        typeBlock = typeBlock.nextConnection &&
+        typeBlock.nextConnection.targetBlock();
+      }
+    }
+  };
+  Blockly.Blocks['type_group_container_ie'] = {
+    // Container.
+    init: function() {
+      this.setColour(230);
+      this.appendDummyInput()
+      .appendField('Add IEs');
+      this.appendStatementInput('STACK');
+      this.setTooltip('Add, or remove allowed type.');
+      this.setHelpUrl('https://www.youtube.com/watch?v=s2_xaEvcVI0#t=677');
+      this.contextMenu = false;
+    }
+  };
+  Blockly.Blocks['type_group_item_ie'] = {
+    // Add type.
+    init: function() {
+      this.setColour(230);
+      this.appendDummyInput()
+      .appendField('Information Element');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setTooltip('Add a new allowed type.');
+      this.setHelpUrl('https://www.youtube.com/watch?v=s2_xaEvcVI0#t=677');
+      this.contextMenu = false;
+    }
+  };
+  Blockly.Blocks['measurement_policy'] = {
+    init: function() {
+      this.setColour(230);
+      this.appendDummyInput()
+      .appendField(new Blockly.FieldTextInput("Measurement Policy"), "measurement_policy");
+      this.setOutput(true, 'measurement_policy');
+      this.setMutator(new Blockly.Mutator(['type_group_item_dimension_in_context']));
+      this.typeCount_ = 2;
+    },
+    mutationToDom: function(workspace) {
+      var container = document.createElement('mutation');
+      container.setAttribute('types', this.typeCount_);
+      return container;
+    },
+    domToMutation: function(container) {
+      for (var x = 0; x < this.typeCount_; x++) {
+        this.removeInput('TYPE' + x);
+      }
+      this.typeCount_ = parseInt(container.getAttribute('types'), 10);
+      for (var x = 0; x < this.typeCount_; x++) {
+        var input = this.appendValueInput('TYPE' + x)
+        .setCheck('dimension_in_context');
+        if (x == 0) {
+          input.appendField('Dimensions in Context');
+        }
+      }
+    },
+    decompose: function(workspace) {
+      var containerBlock = workspace.newBlock('type_group_container_dimension_in_context');
+      containerBlock.initSvg();
+      var connection = containerBlock.getInput('STACK').connection;
+      for (var x = 0; x < this.typeCount_; x++) {
+        var typeBlock = workspace.newBlock('type_group_item_dimension_in_context');
+        typeBlock.initSvg();
+        connection.connect(typeBlock.previousConnection);
+        connection = typeBlock.nextConnection;
+      }
+      return containerBlock;
+    },
+    compose: function(containerBlock) {
+      for (var x = this.typeCount_ - 1; x >= 0; x--) {
+        this.removeInput('TYPE' + x);
+      }
+      this.typeCount_ = 0;
+      var typeBlock = containerBlock.getInputTargetBlock('STACK');
+      while (typeBlock) {
+        var input = this.appendValueInput('TYPE' + this.typeCount_)
+        .setCheck('dimension_in_context');
+        if (this.typeCount_ == 0) {
+          input.appendField('Dimensions in Context');
+        }
+        if (typeBlock.valueConnection_) {
+          input.connection.connect(typeBlock.valueConnection_);
+        }
+        this.typeCount_++;
+        typeBlock = typeBlock.nextConnection &&
+        typeBlock.nextConnection.targetBlock();
+      }
+    },
+    saveConnections: function(containerBlock) {
+      var typeBlock = containerBlock.getInputTargetBlock('STACK');
+      var x = 0;
+      while (typeBlock) {
+        var input = this.getInput('TYPE' + x);
+        typeBlock.valueConnection_ = input && input.connection.targetConnection;
+        x++;
+        typeBlock = typeBlock.nextConnection &&
+        typeBlock.nextConnection.targetBlock();
+      }
+    }
+  };
+  Blockly.Blocks['type_group_container_dimension_in_context'] = {
+    init: function() {
+      this.setColour(230);
+      this.appendDummyInput()
+      .appendField('Add Dimensions in Context');
+      this.appendStatementInput('STACK');
+      this.setTooltip('Add, or remove allowed type.');
+      this.setHelpUrl('https://www.youtube.com/watch?v=s2_xaEvcVI0#t=677');
+      this.contextMenu = false;
+    }
+  };
+  Blockly.Blocks['type_group_item_dimension_in_context'] = {
+    init: function() {
+      this.setColour(230);
+      this.appendDummyInput()
+      .appendField('Dimension in Context');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setTooltip('Add a new allowed type.');
+      this.setHelpUrl('https://www.youtube.com/watch?v=s2_xaEvcVI0#t=677');
+      this.contextMenu = false;
+    }
+  };
+  Blockly.Blocks['validation_policy'] = {
+    init: function() {
+      this.setColour(230);
+      this.appendDummyInput()
+      .appendField(new Blockly.FieldTextInput("Validation Policy"), "validation_policy");
+      this.setOutput(true, 'validation_policy');
+      this.setMutator(new Blockly.Mutator(['type_group_item_criterion_in_context']));
+      this.typeCount_ = 2;
+    },
+    mutationToDom: function(workspace) {
+      var container = document.createElement('mutation');
+      container.setAttribute('types', this.typeCount_);
+      return container;
+    },
+    domToMutation: function(container) {
+      for (var x = 0; x < this.typeCount_; x++) {
+        this.removeInput('TYPE' + x);
+      }
+      this.typeCount_ = parseInt(container.getAttribute('types'), 10);
+      for (var x = 0; x < this.typeCount_; x++) {
+        var input = this.appendValueInput('TYPE' + x)
+        .setCheck('criterion_in_context');
+        if (x == 0) {
+          input.appendField('Criteria in Context');
+        }
+      }
+    },
+    decompose: function(workspace) {
+      var containerBlock = workspace.newBlock('type_group_container_criterion_in_context');
+      containerBlock.initSvg();
+      var connection = containerBlock.getInput('STACK').connection;
+      for (var x = 0; x < this.typeCount_; x++) {
+        var typeBlock = workspace.newBlock('type_group_item_criterion_in_context');
+        typeBlock.initSvg();
+        connection.connect(typeBlock.previousConnection);
+        connection = typeBlock.nextConnection;
+      }
+      return containerBlock;
+    },
+    compose: function(containerBlock) {
+      for (var x = this.typeCount_ - 1; x >= 0; x--) {
+        this.removeInput('TYPE' + x);
+      }
+      this.typeCount_ = 0;
+      var typeBlock = containerBlock.getInputTargetBlock('STACK');
+      while (typeBlock) {
+        var input = this.appendValueInput('TYPE' + this.typeCount_)
+        .setCheck('criterion_in_context');
+        if (this.typeCount_ == 0) {
+          input.appendField('Criteria in Context');
+        }
+        if (typeBlock.valueConnection_) {
+          input.connection.connect(typeBlock.valueConnection_);
+        }
+        this.typeCount_++;
+        typeBlock = typeBlock.nextConnection &&
+        typeBlock.nextConnection.targetBlock();
+      }
+    },
+    saveConnections: function(containerBlock) {
+      var typeBlock = containerBlock.getInputTargetBlock('STACK');
+      var x = 0;
+      while (typeBlock) {
+        var input = this.getInput('TYPE' + x);
+        typeBlock.valueConnection_ = input && input.connection.targetConnection;
+        x++;
+        typeBlock = typeBlock.nextConnection &&
+        typeBlock.nextConnection.targetBlock();
+      }
+    }
+  };
+  Blockly.Blocks['type_group_container_criterion_in_context'] = {
+    init: function() {
+      this.setColour(230);
+      this.appendDummyInput()
+      .appendField('Add Criteria in Context');
+      this.appendStatementInput('STACK');
+      this.setTooltip('Add, or remove allowed type.');
+      this.setHelpUrl('https://www.youtube.com/watch?v=s2_xaEvcVI0#t=677');
+      this.contextMenu = false;
+    }
+  };
+  Blockly.Blocks['type_group_item_criterion_in_context'] = {
+    init: function() {
+      this.setColour(230);
+      this.appendDummyInput()
+      .appendField('Criterion in Context');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setTooltip('Add a new allowed type.');
+      this.setHelpUrl('https://www.youtube.com/watch?v=s2_xaEvcVI0#t=677');
+      this.contextMenu = false;
+    }
+  };
+  Blockly.Blocks['improvement_policy'] = {
+    init: function() {
+      this.setColour(230);
+      this.appendDummyInput()
+      .appendField(new Blockly.FieldTextInput("Improvement Policy"), "improvement_policy");
+      this.setOutput(true, 'improvement_policy');
+      this.setMutator(new Blockly.Mutator(['type_group_item_enhancement_in_context']));
+      this.typeCount_ = 2;
+    },
+    mutationToDom: function(workspace) {
+      var container = document.createElement('mutation');
+      container.setAttribute('types', this.typeCount_);
+      return container;
+    },
+    domToMutation: function(container) {
+      for (var x = 0; x < this.typeCount_; x++) {
+        this.removeInput('TYPE' + x);
+      }
+      this.typeCount_ = parseInt(container.getAttribute('types'), 10);
+      for (var x = 0; x < this.typeCount_; x++) {
+        var input = this.appendValueInput('TYPE' + x)
+        .setCheck('enhancement_in_context');
+        if (x == 0) {
+          input.appendField('Enhancements in Context');
+        }
+      }
+    },
+    decompose: function(workspace) {
+      var containerBlock = workspace.newBlock('type_group_container_enhancement_in_context');
+      containerBlock.initSvg();
+      var connection = containerBlock.getInput('STACK').connection;
+      for (var x = 0; x < this.typeCount_; x++) {
+        var typeBlock = workspace.newBlock('type_group_item_enhancement_in_context');
+        typeBlock.initSvg();
+        connection.connect(typeBlock.previousConnection);
+        connection = typeBlock.nextConnection;
+      }
+      return containerBlock;
+    },
+    compose: function(containerBlock) {
+      for (var x = this.typeCount_ - 1; x >= 0; x--) {
+        this.removeInput('TYPE' + x);
+      }
+      this.typeCount_ = 0;
+      var typeBlock = containerBlock.getInputTargetBlock('STACK');
+      while (typeBlock) {
+        var input = this.appendValueInput('TYPE' + this.typeCount_)
+        .setCheck('enhancement_in_context');
+        if (this.typeCount_ == 0) {
+          input.appendField('Enhancements in Context');
+        }
+        if (typeBlock.valueConnection_) {
+          input.connection.connect(typeBlock.valueConnection_);
+        }
+        this.typeCount_++;
+        typeBlock = typeBlock.nextConnection &&
+        typeBlock.nextConnection.targetBlock();
+      }
+    },
+    saveConnections: function(containerBlock) {
+      var typeBlock = containerBlock.getInputTargetBlock('STACK');
+      var x = 0;
+      while (typeBlock) {
+        var input = this.getInput('TYPE' + x);
+        typeBlock.valueConnection_ = input && input.connection.targetConnection;
+        x++;
+        typeBlock = typeBlock.nextConnection &&
+        typeBlock.nextConnection.targetBlock();
+      }
+    }
+  };
+  Blockly.Blocks['type_group_container_enhancement_in_context'] = {
+    init: function() {
+      this.setColour(230);
+      this.appendDummyInput()
+      .appendField('Add Enhancements in Context');
+      this.appendStatementInput('STACK');
+      this.setTooltip('Add, or remove allowed type.');
+      this.setHelpUrl('https://www.youtube.com/watch?v=s2_xaEvcVI0#t=677');
+      this.contextMenu = false;
+    }
+  };
+  Blockly.Blocks['type_group_item_enhancement_in_context'] = {
+    init: function() {
+      this.setColour(230);
+      this.appendDummyInput()
+      .appendField('Enhancements in Context');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setTooltip('Add a new allowed type.');
+      this.setHelpUrl('https://www.youtube.com/watch?v=s2_xaEvcVI0#t=677');
+      this.contextMenu = false;
+    }
+  };
+  Blockly.Blocks['report'] = {
+    init: function() {
+      this.setColour(230);
+      this.appendDummyInput()
+      .appendField(new Blockly.FieldTextInput("DQ Report"), "report");
+      this.setOutput(true, 'report');
+      this.setMutator(new Blockly.Mutator(['type_group_item_assertion']));
+      this.typeCount_ = 2;
+    },
+    mutationToDom: function(workspace) {
+      var container = document.createElement('mutation');
+      container.setAttribute('types', this.typeCount_);
+      return container;
+    },
+    domToMutation: function(container) {
+      for (var x = 0; x < this.typeCount_; x++) {
+        this.removeInput('TYPE' + x);
+      }
+      this.typeCount_ = parseInt(container.getAttribute('types'), 10);
+      for (var x = 0; x < this.typeCount_; x++) {
+        var input = this.appendValueInput('TYPE' + x)
+        .setCheck('assertion');
+        if (x == 0) {
+          input.appendField('Assertions');
+        }
+      }
+    },
+    decompose: function(workspace) {
+      var containerBlock = workspace.newBlock('type_group_container_assertion');
+      containerBlock.initSvg();
+      var connection = containerBlock.getInput('STACK').connection;
+      for (var x = 0; x < this.typeCount_; x++) {
+        var typeBlock = workspace.newBlock('type_group_item_assertion');
+        typeBlock.initSvg();
+        connection.connect(typeBlock.previousConnection);
+        connection = typeBlock.nextConnection;
+      }
+      return containerBlock;
+    },
+    compose: function(containerBlock) {
+      for (var x = this.typeCount_ - 1; x >= 0; x--) {
+        this.removeInput('TYPE' + x);
+      }
+      this.typeCount_ = 0;
+      var typeBlock = containerBlock.getInputTargetBlock('STACK');
+      while (typeBlock) {
+        var input = this.appendValueInput('TYPE' + this.typeCount_)
+        .setCheck('assertion');
+        if (this.typeCount_ == 0) {
+          input.appendField('Assertions');
+        }
+        if (typeBlock.valueConnection_) {
+          input.connection.connect(typeBlock.valueConnection_);
+        }
+        this.typeCount_++;
+        typeBlock = typeBlock.nextConnection &&
+        typeBlock.nextConnection.targetBlock();
+      }
+    },
+    saveConnections: function(containerBlock) {
+      var typeBlock = containerBlock.getInputTargetBlock('STACK');
+      var x = 0;
+      while (typeBlock) {
+        var input = this.getInput('TYPE' + x);
+        typeBlock.valueConnection_ = input && input.connection.targetConnection;
+        x++;
+        typeBlock = typeBlock.nextConnection &&
+        typeBlock.nextConnection.targetBlock();
+      }
+    }
+  };
+  Blockly.Blocks['type_group_container_assertion'] = {
+    init: function() {
+      this.setColour(230);
+      this.appendDummyInput()
+      .appendField('Add Assertions');
+      this.appendStatementInput('STACK');
+      this.setTooltip('Add, or remove allowed type.');
+      this.setHelpUrl('https://www.youtube.com/watch?v=s2_xaEvcVI0#t=677');
+      this.contextMenu = false;
+    }
+  };
+  Blockly.Blocks['type_group_item_assertion'] = {
+    init: function() {
+      this.setColour(230);
+      this.appendDummyInput()
+      .appendField('Assertions');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setTooltip('Add a new allowed type.');
+      this.setHelpUrl('https://www.youtube.com/watch?v=s2_xaEvcVI0#t=677');
+      this.contextMenu = false;
+    }
+  };
+  Blockly.Blocks['ie'] = {
+    init: function() {
+      this.appendDummyInput()
+      .appendField(new Blockly.FieldTextInput("Information Element"), "ie");
+      this.setInputsInline(true);
+      this.setOutput(true, "ie");
+      this.setColour(300);
+      this.setTooltip('');
+      this.setHelpUrl('http://www.example.com/');
+    }
+  };
+  Blockly.Blocks['rt'] = {
+    init: function() {
+      this.appendDummyInput()
+      .appendField(new Blockly.FieldTextInput("Resource Type"), "rt");
+      this.setInputsInline(true);
+      this.setOutput(true, "rt");
+      this.setColour(350);
+      this.setTooltip('');
+      this.setHelpUrl('http://www.example.com/');
+    }
+  };
+  Blockly.Blocks['dimension'] = {
+    init: function() {
+      this.appendDummyInput()
+      .appendField(new Blockly.FieldTextInput("Dimension"), "dimension");
+      this.setInputsInline(true);
+      this.setOutput(true, "dimension");
+      this.setColour(190);
+      this.setTooltip('');
+      this.setHelpUrl('http://www.example.com/');
+    }
+  };
+  Blockly.Blocks['criterion'] = {
+    init: function() {
+      this.appendDummyInput()
+      .appendField(new Blockly.FieldTextInput("Criterion"), "criterion");
+      this.setInputsInline(true);
+      this.setOutput(true, "criterion");
+      this.setColour(240);
+      this.setTooltip('');
+      this.setHelpUrl('http://www.example.com/');
+    }
+  };
+  Blockly.Blocks['enhancement'] = {
+    init: function() {
+      this.appendDummyInput()
+      .appendField(new Blockly.FieldTextInput("Enhancement"), "enhancement");
+      this.setInputsInline(true);
+      this.setOutput(true, "enhancement");
+      this.setColour(290);
+      this.setTooltip('');
+      this.setHelpUrl('http://www.example.com/');
+    }
+  };
+  Blockly.Blocks['specification'] = {
+    init: function() {
+      this.appendDummyInput()
+      .appendField(new Blockly.FieldTextInput("Specification"), "specification");
+      this.setInputsInline(true);
+      this.setOutput(true, "specification");
+      this.setColour(360);
+      this.setTooltip('');
+      this.setHelpUrl('http://www.example.com/');
+    }
+  };
+  Blockly.Blocks['mechanism'] = {
+    init: function() {
+      this.appendDummyInput()
+      .appendField(new Blockly.FieldTextInput("Mechanism"), "mechanism");
+      this.setInputsInline(true);
+      this.setOutput(true, "mechanism");
+      this.setColour(360);
+      this.setTooltip('');
+      this.setHelpUrl('http://www.example.com/');
+    }
+  };
+  Blockly.Blocks['value'] = {
+    init: function() {
+      this.appendDummyInput()
+      .appendField(new Blockly.FieldTextInput("Value"), "value");
+      this.setInputsInline(true);
+      this.setOutput(true, "value");
+      this.setColour(360);
+      this.setTooltip('');
+      this.setHelpUrl('http://www.example.com/');
+    }
+  };
+  Blockly.Blocks['id'] = {
+    init: function() {
+      this.appendDummyInput()
+      .appendField(new Blockly.FieldTextInput("Persistent Identifier"), "id");
+      this.setInputsInline(true);
+      this.setOutput(true, "id");
+      this.setColour(360);
+      this.setTooltip('');
+      this.setHelpUrl('http://www.example.com/');
+    }
+  };
+  Blockly.Blocks['result'] = {
+    init: function() {
+      this.appendDummyInput()
+      .appendField(new Blockly.FieldTextInput("Result"), "result");
+      this.setInputsInline(true);
+      this.setOutput(true, "result");
+      this.setColour(90);
+      this.setTooltip('');
+      this.setHelpUrl('http://www.example.com/');
+    }
+  };
+  Blockly.Blocks['profile'] = {
+    init: function() {
+      this.appendDummyInput()
+      .appendField(new Blockly.FieldTextInput("DQ Profile"), "profiel");
+      this.appendValueInput("use_case")
+      .setCheck("use_case")
+      .appendField("Use Case");
+      this.appendValueInput("measurement_policy")
+      .setCheck("measurement_policy")
+      .appendField("Measurement Policy");
+      this.appendValueInput("validation_policy")
+      .setCheck("validation_policy")
+      .appendField("Validation Policy");
+      this.appendValueInput("improvement_policy")
+      .setCheck("improvement_policy")
+      .appendField("Improvement Policy");
+      this.setColour(190);
+      this.setTooltip('');
+      this.setHelpUrl('http://www.example.com/');
+    }
+  };
+  Blockly.Blocks['assertion'] = {
+    init: function() {
+      this.appendDummyInput()
+      .appendField(new Blockly.FieldTextInput("Assertion"), "assertion");
+      this.appendValueInput("dr")
+      .setCheck("dr")
+      .appendField("Data Resource");
+      this.appendValueInput("result")
+      .setCheck("result")
+      .appendField("Result");
+      this.setInputsInline(true);
+      this.setOutput(true, "assertion");
+      this.setColour(230);
+      this.setTooltip('');
+      this.setHelpUrl('http://www.example.com/');
+    }
+  };
+  Blockly.Blocks['dr'] = {
+    init: function() {
+      this.appendDummyInput()
+      .appendField(new Blockly.FieldTextInput("Data Resource"), "dr");
+      this.appendValueInput("id")
+      .setCheck("id")
+      .appendField("Persistent Identifier");
+      this.appendValueInput("rt")
+      .setCheck("rt")
+      .appendField("Resource Type");
+      this.appendValueInput("value")
+      .setCheck("value")
+      .appendField("Value");
+      this.setInputsInline(true);
+      this.setOutput(true, "dr");
+      this.setColour(230);
+      this.setTooltip('');
+      this.setHelpUrl('http://www.example.com/');
+    }
+  };
+  Blockly.Blocks['solution'] = {
+    init: function() {
+      this.appendDummyInput()
+      .appendField(new Blockly.FieldTextInput("DQ Solution"), "solution");
+      this.appendValueInput("specification")
+      .setCheck("specification")
+      .appendField("Specification");
+      this.appendValueInput("mechanism")
+      .setCheck("mechanism")
+      .appendField("Mechanism");
+      this.appendValueInput("report")
+      .setCheck("report")
+      .appendField("DQ Report");
+      this.setOutput(true, "solution");
+      this.setColour(320);
+      this.setTooltip('');
+      this.setHelpUrl('http://www.example.com/');
+    }
+  };
+  Blockly.Blocks['dimension_in_context'] = {
+    init: function() {
+      this.appendDummyInput()
+      .appendField(new Blockly.FieldTextInput("Dimension in Context"), "dimension_in_context");
+      this.appendValueInput("dimension")
+      .setCheck("dimension")
+      .appendField("Dimension");
+      this.appendValueInput("ie")
+      .setCheck("ie")
+      .appendField("IE");
+      this.appendValueInput("rt")
+      .setCheck("rt")
+      .appendField("Resource Type");
+      this.appendValueInput("solution")
+      .setCheck("solution")
+      .appendField("DQ Solution");
+      this.setOutput(true, "dimension_in_context");
+      this.setColour(190);
+      this.setTooltip('');
+      this.setHelpUrl('http://www.example.com/');
+    }
+  };
+  Blockly.Blocks['criterion_in_context'] = {
+    init: function() {
+      this.appendDummyInput()
+      .appendField(new Blockly.FieldTextInput("Criterion in Context"), "criterion_in_context");
+      this.appendValueInput("criterion")
+      .setCheck("criterion")
+      .appendField("Criterion");
+      this.appendValueInput("ie")
+      .setCheck("ie")
+      .appendField("IE");
+      this.appendValueInput("rt")
+      .setCheck("rt")
+      .appendField("Resource Type");
+      this.appendValueInput("solution")
+      .setCheck("solution")
+      .appendField("DQ Solution");
+      this.setOutput(true, "criterion_in_context");
+      this.setColour(240);
+      this.setTooltip('');
+      this.setHelpUrl('http://www.example.com/');
+    }
+  };
+  Blockly.Blocks['enhancement_in_context'] = {
+    init: function() {
+      this.appendDummyInput()
+      .appendField(new Blockly.FieldTextInput("Enhancement in Context"), "enhancement_in_context");
+      this.appendValueInput("enhancement")
+      .setCheck("enhancement")
+      .appendField("Enhancement");
+      this.appendValueInput("ie")
+      .setCheck("ie")
+      .appendField("IE");
+      this.appendValueInput("rt")
+      .setCheck("rt")
+      .appendField("Resource Type");
+      this.appendValueInput("solution")
+      .setCheck("solution")
+      .appendField("DQ Solution");
+      this.setOutput(true, "enhancement_in_context");
+      this.setColour(290);
+      this.setTooltip('');
+      this.setHelpUrl('http://www.example.com/');
+    }
+  };
+  var workspace = Blockly.inject('blocklyDiv',
+  {media: '../../media/',
+  toolbox: document.getElementById('toolbox')});
+  //Retrieve
+
+  function createReport() {
+    var assertions = [];
+    workspace.getAllBlocks().forEach(function (b) {
+      if(b.type=="dr"){
+        var r = {};
+        r.dataResource = {};
+        b.childBlocks_.forEach(function (c) {
+          if(c.inputList[0].fieldRow[0].name=="id"){
+            r.dataResource.id = c.inputList[0].fieldRow[0].text_;
+          }else if(c.inputList[0].fieldRow[0].name=="rt"){
+            r.dataResource.resourceType = c.inputList[0].fieldRow[0].text_;
+          }else if(c.inputList[0].fieldRow[0].name=="value"){
+            r.dataResource.value = c.inputList[0].fieldRow[0].text_;
+          }
+        });
+        r.assertion = b.parentBlock_.childBlocks_[1].inputList[0].fieldRow[0].text_;;
+        var solutionBlock = b.parentBlock_.parentBlock_.parentBlock_
+        r.specification = solutionBlock.childBlocks_[0].inputList[0].fieldRow[0].text_;
+        r.mechanism = solutionBlock.childBlocks_[1].inputList[0].fieldRow[0].text_;
+        var cc = {};
+        cc.name = solutionBlock.parentBlock_.inputList[0].fieldRow[0].text_;
+        cc.c = solutionBlock.parentBlock_.childBlocks_[0].inputList[0].fieldRow[0].text_;
+        cc.ie = solutionBlock.parentBlock_.childBlocks_[1].inputList[0].fieldRow[0].text_;
+        cc.rt = solutionBlock.parentBlock_.childBlocks_[2].inputList[0].fieldRow[0].text_;
+        if (solutionBlock.parentBlock_.type == "dimension_in_context") {
+          r.type = "measure";
+          r.dimensionInContext = cc;
+        } else if (solutionBlock.parentBlock_.type == "criterion_in_context") {
+          r.type = "validation";
+          r.criterionInContext = cc;
+        } else if (solutionBlock.parentBlock_.type == "enhancement_in_context") {
+          r.type = "improvement";
+          r.enhancementInContext = cc;
+        }
+        assertions.push(r);
+      }
+    });
+    console.log(assertions);
+    $('#popup').html("");
+    var content = $('#popup');
+
+    assertions.forEach(function (item) {
+      var specification = "* Specification: "+item.specification+"\n";
+      var mechanism = "* Mechanism: "+item.mechanism+"\n";
+      if(item.type=="measure"){
+        var cc = '<p title="'+specification+mechanism+'">'+item.dimensionInContext.name;
+      } else if(item.type=="validation"){
+        var cc = '<p title="'+specification+mechanism+'">'+item.criterionInContext.name;
+      } else if(item.type=="improvement"){
+        var cc = '<p title="'+specification+mechanism+'">'+item.enhancementInContext.name;
+      }
+      var assertion = "<b>"+item.assertion+"</b></p>";
+
+      if(!$('#'+item.dataResource.id).length){
+        var divDr = '<h3>Data Resource: '+item.dataResource.id+' ('+item.dataResource.resourceType+')</h3><div style="color:#fff;border-radius: 15px 50px;background-color:#73AD21;padding:1px 20px 5px 20px;margin:5px; margin-bottom:0px" id="'+item.dataResource.id+'"><div id="'+item.dataResource.id+'_data"><h4>Data Value:</h4></div></div>';
+        content.html(content.html()+divDr);
+      }
+      var valueID = CryptoJS.MD5(item.dataResource.value);
+      if(!$('#'+item.dataResource.id+'_'+valueID).length){
+        var divValue = '<p id="'+item.dataResource.id+'_'+valueID+'">'+item.dataResource.value+'</p>';
+        $('#'+item.dataResource.id+'_data').html($('#'+item.dataResource.id+'_data').html()+divValue);
+      }
+      if(!$('#'+item.dataResource.id+"_"+item.type).length){
+        var divType = '<div id="'+item.dataResource.id+"_"+item.type+'"><h4>'+(item.type=="measure"?"Measures:":item.type=="validation"?"Validations:":"Improvements")+'<h4></div>';
+        $('#'+item.dataResource.id).html($('#'+item.dataResource.id).html()+divType);
+      }
+      var separator  = "";
+      $('#'+item.dataResource.id+"_"+item.type).html($('#'+item.dataResource.id+"_"+item.type).html()+cc+": "+assertion+separator);
+    })
+
+    $('#popup').popup({
+      autoopen: false,
+      color: 'white',
+      transition: '0.3s',
+      scrolllock: true
+    });
+    $('#import_popup').popup({
+      autoopen: false,
+      color: 'white',
+      transition: '0.3s',
+      scrolllock: true
+    });
+  }
+
+  $("#generateReport").button({
+    icons: {
+      primary: "ui-icon-contact",
+      //secondary: "ui-icon-unlocked"
+    }
+  }).click(function () {
+    $('#popup').popup('show');
+    createReport();
+  });
+
+  var workspaceName = "default";
+  $("#save").button({
+    icons: {
+      primary: "ui-icon-disk",
+      //secondary: "ui-icon-unlocked"
+    }
+  }).click(function () {
+    var aux = window.prompt("Name of the workspace. \n(Beware! Same name implies into overwrite the previous workspace.)",workspaceName);
+    if(aux!=""){
+      workspaceName = aux;
+      localStorage.setItem(workspaceName, Blockly.Xml.domToText(Blockly.Xml.workspaceToDom(workspace)));
+    }
+  });
+  $("#load").button({
+    icons: {
+      primary: "ui-icon-folder-open",
+      //secondary: "ui-icon-unlocked"
+    }
+  }).click(function () {
+    var aux = window.prompt("Name of the workspace.",workspaceName);
+    workspaceName = aux;
+    workspace.clear();
+    if(localStorage.getItem(aux)){
+      var xml = Blockly.Xml.textToDom(localStorage.getItem(workspaceName));
+      Blockly.Xml.domToWorkspace(workspace, xml);
+    }else {
+      alert("'"+aux+"' not found.");
+    }
+  });
+  $("#import_btn").button({
+    icons: {
+      primary: "ui-icon-arrowrefresh-1-s"
+    }
+  }).click(function () {
+    $('#import_popup').popup('show');
+    $('#xml_import').val("");
+  });
+  $("#export_btn").button({
+    icons: {
+      primary: "ui-icon-arrowrefresh-1-n"
+    }
+  }).click(function () {
+    $('#export_popup').popup('show');
+    $('#xml_export').val(Blockly.Xml.domToText(Blockly.Xml.workspaceToDom(workspace)));
+  });
+  $("#ok").button({
+    icons: {
+      primary: "ui-icon-closethick"
+    }
+  }).click(function () {
+    $('#export_popup').popup('hide');
+  });
+  $("#import_xml").button({
+    icons: {
+      primary: "ui-icon-arrowrefresh-1-s"
+    }
+  }).click(function () {
+    $('#import_popup').popup('hide');
+    var xml = Blockly.Xml.textToDom($('#xml_import').val());
+    Blockly.Xml.domToWorkspace(workspace, xml);
+  });
+  $("#cancel_import").button({
+    icons: {
+      primary: "ui-icon-closethick"
+    }
+  }).click(function () {
+    $('#import_popup').popup('hide');
+  });
+  if(localStorage.getItem(workspaceName)){
+    workspace.clear();
+    var xml = Blockly.Xml.textToDom(localStorage.getItem(workspaceName));
+    Blockly.Xml.domToWorkspace(workspace, xml);
+  }
+  //AutoSave
+  setInterval(function(){
+    localStorage.setItem(workspaceName, Blockly.Xml.domToText(Blockly.Xml.workspaceToDom(workspace)));
+    $('#workspaceName').html("Auto saved: "+workspaceName+"");
+  }, 1000);
+
+  </script>
+</body>
+</html>
